@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>째깍째깍 타이머</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{
+  --c:#3fbf7f; --c2:#2e9c64; --tint:#eafaf1;
+  --ink:#3b3550; --sub:#8a83a0; --line:#e8e2f2; --grape:#8b6fd6; --grape-d:#6f55b8;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0; font-family:'Jua',system-ui,'Apple SD Gothic Neo',sans-serif; color:var(--ink); overflow:hidden;
+  background:radial-gradient(circle at 50% 45%,#fff 0,var(--tint) 75%); transition:background 1s}
+button{font-family:inherit; color:inherit; cursor:pointer; border:none; background:none}
+input{font-family:inherit; color:var(--ink)}
+.btn{border-radius:16px; padding:.5em 1em; font-size:clamp(16px,2.3vh,22px); background:#fff; border:2px solid var(--line);
+  box-shadow:0 4px 0 rgba(0,0,0,.08); white-space:nowrap}
+.btn:active{transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,.08)}
+.btn.go{background:var(--grape); color:#fff; border-color:var(--grape-d)}
+
+/* ── 맞추기 화면 ── */
+#setup{position:fixed; inset:0; overflow:auto; display:flex; align-items:center; justify-content:center; padding:20px;
+  background:linear-gradient(150deg,#fff5f0,#f3efff 55%,#eefaff)}
+.card{background:#fff; border:2px solid var(--line); border-radius:28px; padding:clamp(18px,3vh,32px); width:min(760px,100%);
+  box-shadow:0 8px 0 rgba(0,0,0,.06)}
+.card h1{margin:0 0 4px; font-weight:normal; font-size:clamp(28px,4.5vh,44px); text-align:center}
+.card .sub{color:var(--sub); text-align:center; margin:0 0 18px; font-size:clamp(14px,2vh,18px)}
+.lab{font-size:clamp(15px,2.1vh,19px); color:var(--sub); margin:16px 0 8px}
+#actName{width:100%; font-size:clamp(20px,3vh,28px); padding:.4em .7em; border:2px solid var(--line); border-radius:16px; outline:none; background:#fcfbff}
+#actName:focus{border-color:var(--grape)}
+.presets{display:grid; grid-template-columns:repeat(6,1fr); gap:8px}
+.presets button{font-size:clamp(18px,2.8vh,26px); padding:.45em 0; border-radius:16px; border:2px solid var(--line); background:#fff; box-shadow:0 3px 0 rgba(0,0,0,.06)}
+.presets button.on{background:#f1ecff; border-color:var(--grape); color:var(--grape-d)}
+.custom{display:flex; align-items:center; gap:8px; justify-content:center; margin-top:10px; font-size:clamp(18px,2.6vh,24px)}
+.custom input{width:3.2em; text-align:center; font-size:clamp(26px,4vh,38px); padding:.15em; border:2px solid var(--line); border-radius:14px; outline:none}
+.custom input:focus{border-color:var(--grape)}
+.custom span{color:var(--sub)}
+.styles{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+.styles button{border:3px solid var(--line); border-radius:20px; padding:10px 6px 8px; background:#fff; font-size:clamp(15px,2.2vh,20px)}
+.styles button svg{width:min(80px,10vh); height:min(80px,10vh); display:block; margin:0 auto 4px}
+.styles button.on{border-color:var(--grape); background:#f7f3ff}
+.row2{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:20px; flex-wrap:wrap}
+.tog{display:flex; align-items:center; gap:8px; font-size:clamp(16px,2.2vh,20px); color:var(--sub); cursor:pointer}
+.tog input{width:22px; height:22px; accent-color:var(--grape)}
+#btnStart{font-size:clamp(24px,3.6vh,34px); padding:.45em 1.6em; border-radius:22px}
+
+/* ── 타이머 화면 ── */
+#stage{position:fixed; inset:0; display:none; flex-direction:column; align-items:center; padding:2.5vh 3vw 2vh}
+body.run #stage{display:flex}
+body.run #setup{display:none}
+#title{font-size:clamp(28px,6.5vh,72px); text-align:center; line-height:1.15; min-height:1em; color:var(--ink); max-width:94vw;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+#main{flex:1; min-height:0; width:100%; display:flex; align-items:center; justify-content:center; gap:4vw}
+#vis{position:relative; height:min(70vh,84vw); aspect-ratio:1; flex:none}
+#vis svg{width:100%; height:100%; display:block; overflow:visible}
+#time{font-size:clamp(70px,22vh,280px); line-height:1; color:var(--c2); font-variant-numeric:tabular-nums; letter-spacing:.02em;
+  transition:color .6s; text-shadow:0 6px 0 rgba(0,0,0,.06)}
+/* 원 모양: 숫자는 원 안에 */
+body.s-ring #time{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:min(17vh,20vw)}
+body.s-ring #main{gap:0}
+#vis.beat{animation:beat 1s ease-in-out infinite}
+#vis.beat2{animation:beat .5s ease-in-out infinite}
+.flk{animation:flk .18s ease-in-out infinite alternate; transform-origin:0 0}
+@keyframes flk{from{transform:scale(1,1) rotate(-3deg)}to{transform:scale(.92,1.1) rotate(3deg)}}
+@keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.045)}30%{transform:scale(.99)}45%{transform:scale(1.03)}}
+#msg{font-size:clamp(18px,3.4vh,34px); color:var(--c2); min-height:1.3em; transition:color .6s}
+#ctrl{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:1vh; transition:opacity .4s}
+body.idle #ctrl{opacity:.12}
+#ctrl .btn{font-size:clamp(16px,2.4vh,24px)}
+
+/* 마지막 10초 큰 숫자 */
+#big{position:fixed; inset:0; display:grid; place-items:center; pointer-events:none; z-index:20}
+#big span{font-size:min(70vh,90vw); line-height:1; color:#ff4d5e; opacity:0; text-shadow:0 10px 0 rgba(160,0,20,.15)}
+#big span.pop{animation:pop 1s ease-out}
+@keyframes pop{0%{opacity:.0; transform:scale(1.6)}12%{opacity:.85}100%{opacity:0; transform:scale(.7)}}
+
+/* 끝 */
+#end{position:fixed; inset:0; z-index:30; display:none; place-items:center; background:rgba(255,77,94,.92); color:#fff; text-align:center; cursor:pointer}
+#end.on{display:grid}
+#end .e1{font-size:clamp(70px,20vh,240px); line-height:1.05; animation:shake .5s ease-in-out infinite}
+#end .e2{font-size:clamp(24px,5vh,56px); margin-top:2vh}
+#end .e3{font-size:clamp(14px,2.2vh,20px); opacity:.8; margin-top:3vh}
+@keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-4deg) scale(1.04)}75%{transform:rotate(4deg) scale(1.04)}}
+#end i{position:absolute; top:-20px; width:12px; height:18px; border-radius:3px; animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(115vh) rotate(720deg)}}
+
+/* 세로 화면(태블릿 세로 등) */
+@media (max-width:620px){ .styles{grid-template-columns:repeat(2,1fr)} .presets{grid-template-columns:repeat(3,1fr)} }
+@media (max-aspect-ratio:1/1){
+  #main{flex-direction:column; gap:2vh}
+  #vis{height:min(52vh,86vw)}
+  #time{font-size:clamp(60px,14vh,200px)}
+}
+</style>
+</head>
+<body class="s-ring">
+
+<div id="setup">
+  <div class="card">
+    <h1>⏰ 째깍째깍 타이머</h1>
+    <p class="sub">시간을 고르고 「시작」을 누르면 화면 가득 타이머가 나와요</p>
+
+    <div class="lab">무엇을 하는 시간인가요? (안 적어도 돼요)</div>
+    <input id="actName" placeholder="예) 모둠 토의, 정리 시간" maxlength="30">
+
+    <div class="lab">시간</div>
+    <div class="presets" id="presets"></div>
+    <div class="custom"><input id="inM" inputmode="numeric" maxlength="3"><span>분</span><input id="inS" inputmode="numeric" maxlength="2"><span>초</span></div>
+
+    <div class="lab">모양</div>
+    <div class="styles" id="styles"></div>
+
+    <div class="row2">
+      <label class="tog"><input type="checkbox" id="snd"> 🔔 소리 (끝날 때 종, 마지막 10초 째깍)</label>
+      <button class="btn go" id="btnStart">▶ 시작</button>
+    </div>
+  </div>
+</div>
+
+<div id="stage">
+  <div id="title"></div>
+  <div id="main"><div id="vis"></div><div id="time">0:00</div></div>
+  <div id="msg"></div>
+  <div id="ctrl">
+    <button class="btn" id="bPause">⏸ 잠깐 멈춤</button>
+    <button class="btn" id="bPlus">＋1분</button>
+    <button class="btn" id="bMinus">－1분</button>
+    <button class="btn" id="bRestart">↺ 처음부터</button>
+    <button class="btn" id="bFull">⛶ 전체화면</button>
+    <button class="btn" id="bBack">⚙️ 다시 맞추기</button>
+  </div>
+</div>
+<div id="big"><span></span></div>
+<div id="end"><div><div class="e1">시간 끝! ⏰</div><div class="e2" id="endName"></div><div class="e3">화면을 누르면 닫혀요</div></div></div>
+
+<script>
+const KEY='class_timer_v1';
+const $=s=>document.querySelector(s);
+const PRESETS=[1,2,3,5,10,15];
+let S=Object.assign({name:'',m:3,s:0,style:'ring',sound:true},(()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}})());
+const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} };
+
+/* 각 모양은 svg() 로 그림 틀을 만들고, draw(p, root) 로 남은 비율 p(1→0)만큼 그린다.
+   root 안에서 data-k 로 찾으니 고르기 화면 미리보기에도 같은 그림을 쓸 수 있다 */
+const q=(r,k)=>r.querySelector(`[data-k="${k}"]`);
+const at=(el,o)=>{ if(el) for(const k in o) el.setAttribute(k,o[k]); };
+const STYLES={
+  ring:{nm:'⭕ 줄어드는 원', svg:()=>`<svg viewBox="0 0 200 200">
+      <circle cx="100" cy="100" r="86" fill="#fff" stroke="rgba(0,0,0,.06)" stroke-width="22"/>
+      <circle data-k="rg" cx="100" cy="100" r="86" fill="none" stroke="var(--c)" stroke-width="22" stroke-linecap="round"
+        transform="rotate(-90 100 100)" pathLength="1000" stroke-dasharray="1000 1000"/>
+      <g data-k="dot"><circle r="15" fill="#fff" stroke="var(--c2)" stroke-width="4"/><text font-size="17" text-anchor="middle" dominant-baseline="central" y="1">⭐</text></g></svg>`,
+    draw(p,r){ at(q(r,'rg'),{'stroke-dasharray':`${1000*p} 1000`});
+      const a=-Math.PI/2+2*Math.PI*p; const d=q(r,'dot');
+      d.setAttribute('transform',`translate(${100+86*Math.cos(a)} ${100+86*Math.sin(a)})`); d.style.display=p>0.002?'':'none'; } },
+  glass:{nm:'⏳ 모래시계', svg:()=>{ const u=Math.random().toString(36).slice(2,7); return `<svg viewBox="0 0 200 200">
+      <defs><clipPath id="ct${u}"><path d="M52 22 H148 C148 62 112 84 104 100 H96 C88 84 52 62 52 22Z"/></clipPath>
+        <clipPath id="cb${u}"><path d="M96 100 H104 C112 116 148 138 148 178 H52 C52 138 88 116 96 100Z"/></clipPath></defs>
+      <path d="M52 22 H148 C148 62 112 84 104 100 C112 116 148 138 148 178 H52 C52 138 88 116 96 100 C88 84 52 62 52 22Z" fill="rgba(255,255,255,.8)"/>
+      <g clip-path="url(#ct${u})"><rect data-k="top" x="40" width="120" y="22" height="78" fill="var(--c)"/></g>
+      <g clip-path="url(#cb${u})"><path data-k="bot" fill="var(--c)"/></g>
+      <rect data-k="stream" x="98" y="98" width="4" height="78" rx="2" fill="var(--c)"/>
+      <path d="M52 22 H148 C148 62 112 84 104 100 C112 116 148 138 148 178 H52 C52 138 88 116 96 100 C88 84 52 62 52 22Z" fill="none" stroke="#c9a46a" stroke-width="5" stroke-linejoin="round"/>
+      <rect x="38" y="10" width="124" height="14" rx="7" fill="#c8843f"/><rect x="38" y="176" width="124" height="14" rx="7" fill="#c8843f"/>
+      <ellipse cx="72" cy="45" rx="6" ry="14" fill="#fff" opacity=".7"/></svg>`; },
+    draw(p,r){ const top=22+78*(1-p); at(q(r,'top'),{y:top,height:Math.max(0,100-top)});
+      const h=74*(1-p), base=178, peak=base-h-10*(1-p);
+      at(q(r,'bot'),{d:`M40 ${base} L40 ${base-h} Q100 ${peak-6} 160 ${base-h} L160 ${base}Z`});
+      const st=q(r,'stream'); st.style.display=(p>0.003&&p<0.999)?'':'none'; at(st,{height:Math.max(0,peak-98)}); } },
+  ice:{nm:'🍦 녹는 아이스크림', svg:()=>`<svg viewBox="0 0 200 200">
+      <ellipse data-k="pud" cx="100" cy="186" rx="10" ry="4" fill="var(--c)" opacity=".55"/>
+      <path d="M66 104 L100 182 L134 104Z" fill="#f2b766" stroke="#c8843f" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M74 116 L118 116 M80 132 L112 132 M86 148 L106 148 M84 108 L108 160 M116 108 L96 160" stroke="#c8843f" stroke-width="2.5" opacity=".6"/>
+      <path data-k="sc" fill="var(--c)"/><circle data-k="hl" r="8" fill="#fff" opacity=".55"/>
+      <text data-k="cherry" font-size="22" text-anchor="middle" x="100">🍒</text><path data-k="drip" fill="var(--c)"/></svg>`,
+    draw(p,r){ const R=8+40*Math.sqrt(p), cy=104-R*0.72;
+      at(q(r,'sc'),{d:`M${100-R} 104 A${R} ${R} 0 1 1 ${100+R} 104 Q${100+R*0.6} 110 ${100+R*0.3} 104 Q100 112 ${100-R*0.3} 104 Q${100-R*0.6} 110 ${100-R} 104Z`});
+      at(q(r,'hl'),{cx:100-R*0.45, cy:cy-R*0.25, r:Math.max(2,R*0.18)});
+      const ch=q(r,'cherry'); at(ch,{y:104-R*1.62}); ch.style.display=p>0.06?'':'none';
+      const d=(1-p)*22; at(q(r,'drip'),{d:p<0.98?`M${100+R*0.55} 104 q4 ${d} 0 ${d+6} q-4 -${d*0.4} -4 -${d+6}Z`:''});
+      at(q(r,'pud'),{rx:10+70*(1-p), ry:3+6*(1-p)}); } },
+  candle:{nm:'🕯️ 타는 초', svg:()=>`<svg viewBox="0 0 200 200">
+      <ellipse cx="100" cy="184" rx="62" ry="10" fill="#e9dfc9"/><ellipse cx="100" cy="180" rx="52" ry="8" fill="#f6efe0" stroke="#d8c9a6" stroke-width="3"/>
+      <g data-k="body"><rect data-k="wax" x="76" width="48" rx="8" fill="var(--c)"/>
+        <rect data-k="shine" x="84" width="8" rx="4" fill="#fff" opacity=".45"/>
+        <path data-k="drop" fill="var(--c)"/>
+        <line data-k="wick" x1="100" x2="100" stroke="#4a3b2a" stroke-width="3" stroke-linecap="round"/>
+        <g data-k="flame"><g class="flk"><path d="M0 -34 C14 -14 12 0 0 0 C-12 0 -14 -14 0 -34Z" fill="#ffb02e"/><path d="M0 -20 C7 -9 6 0 0 0 C-6 0 -7 -9 0 -20Z" fill="#fff3b0"/></g>
+          <circle r="30" cy="-14" fill="#ffd36b" opacity=".18"/></g></g></svg>`,
+    draw(p,r){ const h=8+132*p, y=178-h;
+      at(q(r,'wax'),{y, height:h}); at(q(r,'shine'),{y:y+10, height:Math.max(0,h-22)});
+      at(q(r,'drop'),{d:h>20?`M76 ${y+6} q-3 12 2 ${14+8*(1-p)} q5 -2 4 -${14+8*(1-p)}Z M124 ${y+4} q3 9 -2 ${10+6*(1-p)} q-4 -3 -2 -${10+6*(1-p)}Z`:''});
+      at(q(r,'wick'),{y1:y, y2:y-9}); at(q(r,'flame'),{transform:`translate(100 ${y-6})`});
+      q(r,'flame').style.display=p>0.001?'':'none'; } },
+  pizza:{nm:'🍕 줄어드는 피자', svg:()=>{ const u=Math.random().toString(36).slice(2,7); return `<svg viewBox="0 0 200 200">
+      <circle cx="100" cy="100" r="92" fill="#fff" stroke="#e8e2f2" stroke-width="4"/><circle cx="100" cy="100" r="80" fill="none" stroke="#f1ecf7" stroke-width="2" stroke-dasharray="4 6"/>
+      <defs><clipPath id="pz${u}"><path data-k="wedge"/></clipPath></defs>
+      <g clip-path="url(#pz${u})">
+        <circle cx="100" cy="100" r="80" fill="#e9a65a"/><circle cx="100" cy="100" r="70" fill="#f7d26b"/>
+        <circle cx="100" cy="100" r="70" fill="var(--c)" opacity=".18"/>
+        ${[[80,62],[124,70],[64,104],[108,100],[140,112],[90,136],[124,144],[70,80],[150,84],[100,72]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="9" fill="#d9483b"/><circle cx="${x-3}" cy="${y-3}" r="2.5" fill="#f08a7a"/>`).join('')}
+        ${[[94,84],[132,94],[78,124],[112,124],[146,134],[60,140]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="5" ry="3" fill="#4f9a3a" transform="rotate(30 ${x} ${y})"/>`).join('')}
+        ${Array.from({length:8},(_,i)=>{ const a=-Math.PI/2+i*Math.PI/4; return `<line x1="100" y1="100" x2="${100+80*Math.cos(a)}" y2="${100+80*Math.sin(a)}" stroke="#c98a3f" stroke-width="2" opacity=".6"/>`; }).join('')}
+      </g></svg>`; },
+    draw(p,r){ const a=Math.max(0,Math.min(1,p))*2*Math.PI; const w=q(r,'wedge');
+      if(p>=0.9999){ at(w,{d:'M100 15 A85 85 0 1 1 99.99 15Z'}); return; }
+      const x=100+85*Math.cos(-Math.PI/2+a), y=100+85*Math.sin(-Math.PI/2+a);
+      at(w,{d:p<=0?'':`M100 100 L100 15 A85 85 0 ${a>Math.PI?1:0} 1 ${x} ${y}Z`}); } },
+  battery:{nm:'🔋 배터리', svg:()=>`<svg viewBox="0 0 200 200">
+      <rect x="18" y="58" width="152" height="84" rx="16" fill="#fff" stroke="#5b5470" stroke-width="7"/>
+      <rect x="170" y="82" width="14" height="36" rx="5" fill="#5b5470"/>
+      <rect data-k="lv" x="28" y="68" height="64" rx="8" fill="var(--c)"/>
+      <path d="M30 76 H160" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".35"/>
+      ${[1,2,3,4].map(i=>`<line x1="${28+132*i/5}" y1="66" x2="${28+132*i/5}" y2="134" stroke="#fff" stroke-width="4"/>`).join('')}
+      <path data-k="bolt" d="M104 74 L84 104 H98 L92 128 L116 94 H102Z" fill="#fff" stroke="#5b5470" stroke-width="3" stroke-linejoin="round"/></svg>`,
+    draw(p,r){ at(q(r,'lv'),{width:Math.max(0,132*p)}); q(r,'bolt').style.opacity=p>0.12?1:.35; } },
+  snail:{nm:'🐌 달팽이 결승선', svg:()=>`<svg viewBox="0 0 200 200">
+      <path d="M20 150 C30 40, 170 40, 180 150" fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round"/>
+      <path d="M20 150 C30 40, 170 40, 180 150" fill="none" stroke="#e3dcef" stroke-width="3" stroke-dasharray="6 7"/>
+      <path data-k="trail" d="M20 150 C30 40, 170 40, 180 150" fill="none" stroke="var(--c)" stroke-width="12" stroke-linecap="round" pathLength="1000" stroke-dasharray="0 1000" opacity=".8"/>
+      <text x="14" y="182" font-size="15" fill="#8a83a0" font-family="Jua">출발</text>
+      <text x="168" y="158" font-size="30" text-anchor="middle">🏁</text>
+      <g data-k="sn"><text font-size="34" text-anchor="middle" dominant-baseline="central" transform="scale(-1 1)">🐌</text></g></svg>`,
+    draw(p,r){ const t=1-p; at(q(r,'trail'),{'stroke-dasharray':`${1000*t} 1000`});
+      const path=q(r,'trail'); const L=path.getTotalLength(); const pt=path.getPointAtLength(L*t), pt2=path.getPointAtLength(Math.min(L,L*t+1));
+      const ang=Math.atan2(pt2.y-pt.y,pt2.x-pt.x)*180/Math.PI;
+      at(q(r,'sn'),{transform:`translate(${pt.x} ${pt.y}) rotate(${t>=1?0:ang}) translate(0 -16)`}); } },
+  balloon:{nm:'🎈 바람 빠지는 풍선', svg:()=>`<svg viewBox="0 0 200 200">
+      <path data-k="str" fill="none" stroke="#8a83a0" stroke-width="2.5"/>
+      <g data-k="bl"><ellipse cx="0" cy="0" rx="50" ry="60" fill="var(--c)"/><ellipse cx="-18" cy="-24" rx="10" ry="16" fill="#fff" opacity=".5"/>
+        <path d="M-7 58 L7 58 L0 66Z" fill="var(--c2)"/></g></svg>`,
+    draw(p,r){ const s=.3+.7*Math.sqrt(p), cy=20+66*s, wob=p<.15? Math.sin(performance.now()/90)*4*(1-p/.15):0;
+      at(q(r,'bl'),{transform:`translate(${100+wob} ${cy}) scale(${s*(1+ (p<.15?.06*Math.sin(performance.now()/60):0))} ${s})`});
+      const by=cy+66*s; at(q(r,'str'),{d:`M${100+wob} ${by} C ${88} ${by+30}, ${112} ${by+50}, 100 196`}); } },
+};
+
+/* ── 맞추기 화면 ── */
+function drawSetup(){
+  $('#actName').value=S.name; $('#inM').value=S.m; $('#inS').value=S.s; $('#snd').checked=S.sound;
+  $('#presets').innerHTML=PRESETS.map(m=>`<button data-m="${m}" class="${S.m==m&&!+S.s?'on':''}">${m}분</button>`).join('');
+  $('#styles').innerHTML=Object.entries(STYLES).map(([k,v])=>`<button data-st="${k}" class="${S.style===k?'on':''}">${v.svg()}<span>${v.nm}</span></button>`).join('');
+  document.querySelectorAll('#styles [data-st]').forEach(b=>STYLES[b.dataset.st].draw(.6,b));
+}
+$('#presets').onclick=e=>{ const b=e.target.closest('[data-m]'); if(!b) return; S.m=+b.dataset.m; S.s=0; save(); drawSetup(); };
+$('#styles').onclick=e=>{ const b=e.target.closest('[data-st]'); if(!b) return; S.style=b.dataset.st; save(); drawSetup(); };
+$('#actName').oninput=e=>{ S.name=e.target.value; save(); };
+['inM','inS'].forEach(id=>$('#'+id).oninput=e=>{ e.target.value=e.target.value.replace(/\D/g,''); S.m=+$('#inM').value||0; S.s=Math.min(59,+$('#inS').value||0); save();
+  document.querySelectorAll('#presets button').forEach(b=>b.classList.toggle('on',+b.dataset.m===S.m&&!S.s)); });
+$('#snd').onchange=e=>{ S.sound=e.target.checked; save(); };
+
+/* ── 소리 (Web Audio) ── */
+let AC=null;
+function ac(){ try{ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); }catch(e){ return null; } return AC; }
+function tone(f,dur,type,vol,delay){ if(!S.sound) return; const c=ac(); if(!c) return; const t=c.currentTime+(delay||0);
+  const o=c.createOscillator(), g=c.createGain(); o.type=type||'sine'; o.frequency.value=f;
+  g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol||.25,t+.01); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t+dur+.05); }
+const tick=last=>tone(last?1320:880,.09,'square',.08);
+function bell(){ [0,.55,1.1].forEach(d=>{ tone(1046,1.4,'sine',.3,d); tone(1568,1.0,'sine',.12,d); tone(523,1.6,'triangle',.12,d); }); }
+
+/* ── 타이머 ── */
+let total=0, endAt=0, left=0, running=false, lastSec=-1, raf=0;
+function fmt(t){ t=Math.max(0,Math.ceil(t)); const m=Math.floor(t/60), s=t%60; return `${m}:${String(s).padStart(2,'0')}`; }
+/* 남은 시간에 따라 색: 초록 → 노랑(절반) → 주황(1분 전) → 빨강(10초 전) */
+function phase(t,p){ return t<=10?'red': t<=60?'orange': p<=.5?'yellow':'green'; }
+const PH={green:['#3fbf7f','#2e9c64','#eafaf1'], yellow:['#f5c518','#c99a00','#fff9e0'], orange:['#ff9a3c','#e0741a','#fff0e2'], red:['#ff4d5e','#e02a3d','#ffe8ea']};
+const MSG={green:'', yellow:'⏳ 절반 지났어요', orange:'🏃 1분 남았어요! 마무리해요', red:'🔥 곧 끝나요!'};
+let curPh='';
+function paint(){
+  const now=performance.now(); if(running) left=Math.max(0,(endAt-now)/1000);
+  const p=total?left/total:0; const ph=phase(left,p);
+  if(ph!==curPh){ curPh=ph; const [c,c2,tint]=PH[ph]; const r=document.documentElement.style;
+    r.setProperty('--c',c); r.setProperty('--c2',c2); r.setProperty('--tint',tint); }
+  $('#msg').textContent=left<=0?'⏰ 시간 끝!': running?MSG[ph]: '⏸ 잠깐 멈췄어요';
+  STYLES[S.style].draw(p,$('#vis'));
+  $('#time').textContent=fmt(left);
+  const v=$('#vis'); v.classList.toggle('beat',running&&left<=60&&left>10); v.classList.toggle('beat2',running&&left<=10&&left>0);
+  const sec=Math.ceil(left);
+  if(running && sec!==lastSec){ lastSec=sec;
+    if(sec<=10&&sec>0){ const b=$('#big span'); b.textContent=sec; b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); tick(sec<=3); } }
+  if(running && left<=0){ running=false; finish(); return; }
+  if(running) raf=requestAnimationFrame(paint);
+}
+function start(){
+  total=(+S.m||0)*60+(+S.s||0); if(total<=0){ $('#inM').focus(); return; }
+  ac(); document.body.className='run s-'+S.style;
+  $('#title').textContent=S.name||''; $('#vis').innerHTML=STYLES[S.style].svg();
+  left=total; curPh=''; lastSec=-1; resume();
+  fullOn(); idleKick();
+}
+function resume(){ if(left<=0) return; running=true; endAt=performance.now()+left*1000; $('#bPause').textContent='⏸ 잠깐 멈춤'; cancelAnimationFrame(raf); paint(); }
+function pause(){ if(!running) return; running=false; left=Math.max(0,(endAt-performance.now())/1000); cancelAnimationFrame(raf); $('#bPause').textContent='▶ 계속'; paint(); }
+function add(sec){ if(running){ endAt+=sec*1000; left=(endAt-performance.now())/1000; if(left<1){ endAt=performance.now()+1000; } }
+  else { left=Math.max(0,left+sec); }
+  total=Math.max(total,left); lastSec=-1; if(!running) paint(); }
+function finish(){
+  $('#time').textContent='0:00'; STYLES[S.style].draw(0,$('#vis')); $('#vis').className='';
+  $('#endName').textContent=S.name? `「${S.name}」 시간이 끝났어요` : '';
+  const e=$('#end'); e.querySelectorAll('i').forEach(x=>x.remove());
+  const cols=['#ffe066','#fff','#8be0ff','#b6ff8b','#ffb3d1'];
+  for(let k=0;k<60;k++){ const i=document.createElement('i'); i.style.left=Math.random()*100+'vw'; i.style.background=cols[k%5];
+    i.style.animationDuration=(2.2+Math.random()*2.5)+'s'; i.style.animationDelay=(Math.random()*1.2)+'s'; e.appendChild(i); }
+  e.classList.add('on'); bell(); $('#bPause').textContent='▶ 계속';
+}
+$('#end').onclick=()=>$('#end').classList.remove('on');
+$('#btnStart').onclick=start;
+$('#bPause').onclick=()=> running? pause() : resume();
+$('#bPlus').onclick=()=>add(60);
+$('#bMinus').onclick=()=>add(-60);
+$('#bRestart').onclick=()=>{ $('#end').classList.remove('on'); left=total=(+S.m||0)*60+(+S.s||0); lastSec=-1; curPh=''; resume(); };
+$('#bBack').onclick=()=>{ running=false; cancelAnimationFrame(raf); $('#end').classList.remove('on'); document.body.className='s-'+S.style; drawSetup(); };
+function fullOn(){ const d=document.documentElement; if(d.requestFullscreen&&!document.fullscreenElement) d.requestFullscreen().catch(()=>{}); }
+$('#bFull').onclick=()=> document.fullscreenElement? document.exitFullscreen() : fullOn();
+/* 가만히 있으면 버튼을 흐리게 → 화면이 깔끔 */
+let idleT=0; function idleKick(){ document.body.classList.remove('idle'); clearTimeout(idleT); idleT=setTimeout(()=>{ if(document.body.classList.contains('run')) document.body.classList.add('idle'); },4000); }
+['mousemove','pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,idleKick));
+document.addEventListener('keydown',e=>{
+  if(!document.body.classList.contains('run')){ if(e.key==='Enter') start(); return; }
+  if(e.key===' '){ e.preventDefault(); if($('#end').classList.contains('on')) { $('#end').classList.remove('on'); return; } running?pause():resume(); }
+  if(e.key==='Escape') $('#end').classList.remove('on');
+});
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&running){ cancelAnimationFrame(raf); paint(); } });
+drawSetup();
+</script>
+</body>
+</html>
