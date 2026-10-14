@@ -127,6 +127,31 @@ body.swon #swGo{background:#5b5470; border-color:#3f3953; box-shadow:0 7px 0 #2c
 .swctl{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; transition:opacity .4s}
 .swctl .btn{font-size:clamp(15px,2.2vh,21px)}
 body.idle .swctl{opacity:.15}
+
+/* ── 📢 집중 효과음 ── */
+#fxBtn{position:fixed; right:18px; bottom:18px; z-index:40; border-radius:999px; padding:.45em 1em; font-size:clamp(17px,2.4vh,24px);
+  background:#ffd23f; border:3px solid #e6b400; box-shadow:0 5px 0 #c99a00; color:#5a4300; transition:opacity .4s}
+#fxBtn:active{transform:translateY(4px); box-shadow:0 1px 0 #c99a00}
+body.idle #fxBtn{opacity:.25}
+#fxPanel{position:fixed; right:18px; bottom:84px; z-index:41; width:min(560px,calc(100vw - 36px)); max-height:70vh; overflow:auto; background:#fff;
+  border:3px solid #ffe58a; border-radius:24px; padding:14px; box-shadow:0 14px 40px rgba(60,40,0,.2); display:none}
+#fxPanel.on{display:block}
+#fxPanel h3{margin:0 0 8px; font-weight:normal; font-size:clamp(18px,2.6vh,24px)}
+#fxPanel .g{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+#fxPanel .g button{display:flex; align-items:center; gap:8px; text-align:left; padding:10px 12px; border-radius:16px; border:2px solid #f3ead0; background:#fffdf5;
+  font-size:clamp(15px,2vh,19px); line-height:1.25}
+#fxPanel .g button:hover{background:#fff6d6; border-color:#ffd23f}
+#fxPanel .g button b{font-size:1.7em; font-weight:normal; flex:none}
+#fxPanel .opt{display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; color:var(--sub); font-size:clamp(14px,1.9vh,17px)}
+#fxPanel .opt label{display:flex; align-items:center; gap:6px; cursor:pointer}
+#fxShow{position:fixed; inset:0; z-index:60; display:none; place-items:center; pointer-events:none}
+#fxShow.on{display:grid}
+#fxShow .box{background:rgba(255,255,255,.96); border:6px solid #ffd23f; border-radius:40px; padding:4vh 5vw; text-align:center; max-width:90vw;
+  box-shadow:0 20px 60px rgba(0,0,0,.25); animation:fxIn .5s cubic-bezier(.2,1.6,.4,1)}
+#fxShow .em{font-size:clamp(70px,18vh,200px); line-height:1; animation:fxWig .6s ease-in-out infinite}
+#fxShow .tx{font-size:clamp(30px,7vh,84px); line-height:1.2; margin-top:2vh; color:#3b3550; word-break:keep-all}
+@keyframes fxIn{from{transform:scale(.3) rotate(-8deg); opacity:0}to{transform:scale(1) rotate(0); opacity:1}}
+@keyframes fxWig{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg) scale(1.08)}}
 </style>
 </head>
 <body class="s-ring">
@@ -187,6 +212,10 @@ body.idle .swctl{opacity:.15}
     <button class="btn" id="swReset">🗑 0으로</button><button class="btn" id="swFull">⛶ 전체화면</button><button class="btn" id="swBack">⚙️ 처음 화면</button>
   </div>
 </div>
+<button id="fxBtn">📢 집중 효과음</button>
+<div id="fxPanel"><h3>📢 집중 효과음 <small style="color:var(--sub);font-size:.7em">누르면 소리 + 목소리 + 큰 글씨</small></h3><div class="g" id="fxGrid"></div>
+  <div class="opt"><label><input type="checkbox" id="fxVoice"> 🗣️ 목소리로 읽어 주기</label><label><input type="checkbox" id="fxBanner"> 🖼️ 화면에 크게 보여 주기</label></div></div>
+<div id="fxShow"><div class="box"><div class="em" id="fxEm"></div><div class="tx" id="fxTx"></div></div></div>
 <div id="big"><span></span></div>
 <div id="end"><div><div class="e1">시간 끝! ⏰</div><div class="e2" id="endName"></div><div class="e3">화면을 누르면 닫혀요</div></div></div>
 
@@ -419,6 +448,55 @@ $('#swFull').onclick=()=> document.fullscreenElement? document.exitFullscreen() 
 $('#swBack').onclick=()=>{ cancelAnimationFrame(swRaf); document.body.className='s-'+S.style; drawSetup(); drawMode(); };
 document.querySelector('.swctl').addEventListener('click',e=>{ const b=e.target.closest('[data-adj]'); if(!b) return;
   S.sw.acc=Math.max(-(S.sw.at?Date.now()-S.sw.at:0), S.sw.acc+(+b.dataset.adj)*1000); save(); swPaint(); });
+
+/* ── 📢 집중 효과음: 짧은 효과음 → 멘트(음성 합성) + 큰 글씨 ── */
+S.fxVoice=S.fxVoice??true; S.fxBanner=S.fxBanner??true;
+function fx(f,dur,type,vol,delay,slide){ const c=ac(); if(!c) return; const t=c.currentTime+(delay||0);
+  const o=c.createOscillator(), g=c.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f,t);
+  if(slide) o.frequency.exponentialRampToValueAtTime(slide,t+dur);
+  g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol||.25,t+.015); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t+dur+.05); }
+function noise(dur,vol,delay,hp){ const c=ac(); if(!c) return; const t=c.currentTime+(delay||0);
+  const b=c.createBuffer(1,c.sampleRate*dur,c.sampleRate), d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
+  const n=c.createBufferSource(); n.buffer=b; const f=c.createBiquadFilter(); f.type='highpass'; f.frequency.value=hp||1000;
+  const g=c.createGain(); g.gain.value=vol||.3; n.connect(f).connect(g).connect(c.destination); n.start(t); }
+const notes=(arr,type,vol,step)=>{ arr.forEach((f,i)=>f&&fx(f,(step||.12)*1.6,type||'triangle',vol||.22,i*(step||.12))); return arr.length*(step||.12); };
+const FX=[
+  {em:'🎯', nm:'집중! 집중!', say:'집중! 집중! 눈은 선생님, 귀는 쫑긋!', snd:()=>notes([523,659,784,1046],'square',.12,.11)},
+  {em:'🚀', nm:'집중 로켓 발사', say:'삼, 이, 일! 집중 로켓 발사!', snd:()=>{ [0,.35,.7].forEach(d=>fx(880,.12,'square',.12,d)); fx(200,1.2,'sawtooth',.15,1.05,1600); noise(1.2,.15,1.05,400); return 1.2; }},
+  {em:'🦉', nm:'부엉이 눈', say:'부엉이처럼 눈 크게 뜨고, 집중 모드 온!', snd:()=>{ fx(620,.25,'sine',.25,0,520); fx(620,.35,'sine',.25,.35,480); return .7; }},
+  {em:'🤫', nm:'쉿! 뇌 자라는 중', say:'쉿! 지금은 우리 뇌가 쑥쑥 자라는 시간이에요.', snd:()=>{ noise(.9,.18,0,3000); return .8; }},
+  {em:'🦸', nm:'집중력 충전 완료', say:'띠링! 집중력 슈퍼파워 충전 완료!', snd:()=>{ fx(300,.6,'square',.1,0,1200); notes([0,0,0,0,0,1046,1318,1568],'triangle',.2,.09); return .9; }},
+  {em:'🤐', nm:'입에 지퍼 잠그기', say:'입은 지퍼로 쭈욱 잠그고, 손은 무릎 위에!', snd:()=>{ for(let i=0;i<14;i++) noise(.03,.25,i*.035,2500); fx(1200,.08,'square',.1,.55); return .7; }},
+  {em:'🧲', nm:'눈은 자석처럼', say:'모두의 눈이 자석처럼 칠판으로, 착!', snd:()=>{ fx(200,.5,'sine',.2,0,900); fx(1400,.08,'square',.15,.5); return .65; }},
+  {em:'🚂', nm:'집중 열차 출발', say:'띵동! 집중 열차가 출발합니다. 떠드는 친구는 다음 역에서 내려요~', snd:()=>notes([659,523,587,392,0,392,587,659,523],'sine',.25,.22)},
+  {em:'👏', nm:'들리면 박수 두 번', say:'이 소리가 들리는 친구, 박수 두 번!', snd:()=>{ notes([784,784,1046],'square',.1,.15); return .5; }},
+  {em:'🐢', nm:'거북이처럼 조용히', say:'거북이처럼 조용조용, 하지만 생각은 토끼처럼 빠르게!', snd:()=>notes([392,0,440,0,494,523],'triangle',.2,.13)},
+  {em:'🏆', nm:'조용한 우리 반 최고', say:'와! 집중하는 우리 반 최고! 정말 멋져요!', snd:()=>{ notes([523,523,523,698,0,880,0,1046],'square',.12,.12); return 1; }},
+  {em:'🎤', nm:'조용~ 신호', say:'자, 하나 둘 셋 하면 조용! 하나, 둘, 셋!', snd:()=>notes([1046,880,698,523],'sine',.25,.16)},
+];
+let fxT=0;
+function playFx(k){ const f=FX[k]; ac(); const len=(f.snd()||.6);
+  if(S.fxBanner){ $('#fxEm').textContent=f.em; $('#fxTx').textContent=f.say; const sh=$('#fxShow'); sh.classList.remove('on'); void sh.offsetWidth; sh.classList.add('on'); }
+  clearTimeout(fxT);
+  const done=()=>{ fxT=setTimeout(()=>$('#fxShow').classList.remove('on'),1200); };
+  if(S.fxVoice && window.speechSynthesis){
+    speechSynthesis.cancel();
+    setTimeout(()=>{ const u=new SpeechSynthesisUtterance(f.say); u.lang='ko-KR'; u.rate=1.05; u.pitch=1.25;
+      const v=speechSynthesis.getVoices().filter(v=>/^ko/i.test(v.lang)); const best=v.find(x=>/Google|Yuna|Heami|SunHi/i.test(x.name))||v[0]; if(best) u.voice=best;
+      u.onend=done; u.onerror=done; speechSynthesis.speak(u); }, len*1000+100);
+    fxT=setTimeout(()=>$('#fxShow').classList.remove('on'),len*1000+9000);
+  } else fxT=setTimeout(()=>$('#fxShow').classList.remove('on'),len*1000+3500);
+}
+$('#fxGrid').innerHTML=FX.map((f,i)=>`<button data-fx="${i}"><b>${f.em}</b><span>${f.nm}</span></button>`).join('');
+$('#fxGrid').onclick=e=>{ const b=e.target.closest('[data-fx]'); if(!b) return; $('#fxPanel').classList.remove('on'); playFx(+b.dataset.fx); };
+$('#fxBtn').onclick=e=>{ e.stopPropagation(); $('#fxPanel').classList.toggle('on'); };
+document.addEventListener('click',e=>{ if(!e.target.closest('#fxPanel,#fxBtn')) $('#fxPanel').classList.remove('on'); });
+$('#fxShow').style.pointerEvents='none';
+$('#fxVoice').checked=S.fxVoice; $('#fxBanner').checked=S.fxBanner;
+$('#fxVoice').onchange=e=>{ S.fxVoice=e.target.checked; save(); };
+$('#fxBanner').onchange=e=>{ S.fxBanner=e.target.checked; save(); };
+window.speechSynthesis && speechSynthesis.getVoices();
 drawSetup();
 drawMode();
 </script>
