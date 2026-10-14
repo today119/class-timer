@@ -31,8 +31,8 @@ input{font-family:inherit; color:var(--ink)}
 .card h1{margin:0 0 4px; font-weight:normal; font-size:clamp(28px,4.5vh,44px); text-align:center}
 .card .sub{color:var(--sub); text-align:center; margin:0 0 18px; font-size:clamp(14px,2vh,18px)}
 .lab{font-size:clamp(15px,2.1vh,19px); color:var(--sub); margin:16px 0 8px}
-#actName{width:100%; font-size:clamp(20px,3vh,28px); padding:.4em .7em; border:2px solid var(--line); border-radius:16px; outline:none; background:#fcfbff}
-#actName:focus{border-color:var(--grape)}
+#actName,#swName{width:100%; font-size:clamp(20px,3vh,28px); padding:.4em .7em; border:2px solid var(--line); border-radius:16px; outline:none; background:#fcfbff}
+#actName:focus,#swName:focus{border-color:var(--grape)}
 .presets{display:grid; grid-template-columns:repeat(6,1fr); gap:8px}
 .presets button{font-size:clamp(18px,2.8vh,26px); padding:.45em 0; border-radius:16px; border:2px solid var(--line); background:#fff; box-shadow:0 3px 0 rgba(0,0,0,.06)}
 .presets button.on{background:#f1ecff; border-color:var(--grape); color:var(--grape-d)}
@@ -96,6 +96,37 @@ body.idle #ctrl{opacity:.12}
   #vis{height:min(52vh,86vw)}
   #time{font-size:clamp(60px,14vh,200px)}
 }
+
+/* ── 모드 고르기 ── */
+.modes{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0 6px}
+.modes button{border:3px solid var(--line); border-radius:20px; padding:12px 8px; font-size:clamp(20px,3vh,28px); background:#fff; line-height:1.2}
+.modes button small{display:block; font-size:clamp(13px,1.8vh,16px); color:var(--sub); margin-top:3px}
+.modes button.on{border-color:var(--grape); background:#f4efff; color:var(--grape-d)}
+body.m-sw #tmSec{display:none} body:not(.m-sw) #swSec{display:none}
+.swnow{margin:16px 0 0; padding:14px; border-radius:18px; background:#fff4f6; border:2px dashed #ffc2cd; text-align:center; font-size:clamp(17px,2.4vh,22px); color:#b2475d}
+.swnow b{font-size:1.6em; font-weight:normal}
+
+/* ── 시간 모으기 화면 ── */
+#sw{position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:1.4vh; padding:3vh 3vw;
+  background:radial-gradient(circle at 50% 45%,#fff 0,#f1efff 80%); text-align:center}
+body.swrun #sw{display:flex} body.swrun #setup{display:none}
+body.swon #sw{animation:swbg 1.6s ease-in-out infinite}
+@keyframes swbg{0%,100%{background:radial-gradient(circle at 50% 45%,#fff 0,#ffe3e7 80%)}50%{background:radial-gradient(circle at 50% 45%,#fff3f4 0,#ffb9c3 80%)}}
+#swTitle{font-size:clamp(28px,6.5vh,72px); line-height:1.15}
+#swBadge{font-size:clamp(18px,3.4vh,34px); color:var(--sub); padding:.2em .9em; border-radius:999px; background:rgba(255,255,255,.7)}
+body.swon #swBadge{color:#fff; background:#ff4d5e; animation:beat 1s ease-in-out infinite}
+#swTime{font-size:clamp(90px,28vh,340px); line-height:1; color:#6f55b8; font-variant-numeric:tabular-nums; text-shadow:0 8px 0 rgba(0,0,0,.06)}
+body.swon #swTime{color:#e02a3d}
+#swCoins{font-size:clamp(20px,4vh,44px); min-height:1.2em; max-width:90vw; line-height:1.1}
+#swCoins small{font-size:.6em; color:var(--sub)}
+#swGo{font-size:clamp(26px,5vh,54px); padding:.4em 1.6em; border-radius:999px; background:#ff6b81; color:#fff; border:4px solid #e04862; box-shadow:0 7px 0 #c73a52}
+#swGo:active{transform:translateY(5px); box-shadow:0 2px 0 #c73a52}
+body.swon #swGo{background:#5b5470; border-color:#3f3953; box-shadow:0 7px 0 #2c2740}
+#swLog{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; max-width:92vw; max-height:14vh; overflow:auto}
+#swLog span{font-size:clamp(14px,2vh,19px); padding:.2em .7em; border-radius:999px; background:#fff; border:2px solid #ffd0d8; color:#b2475d}
+.swctl{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; transition:opacity .4s}
+.swctl .btn{font-size:clamp(15px,2.2vh,21px)}
+body.idle .swctl{opacity:.15}
 </style>
 </head>
 <body class="s-ring">
@@ -103,6 +134,14 @@ body.idle #ctrl{opacity:.12}
 <div id="setup">
   <div class="card">
     <h1>⏰ 째깍째깍 타이머</h1>
+    <div class="modes" id="modes"><button data-mode="timer">⏰ 타이머<small>정한 시간이 줄어들어요</small></button><button data-mode="sw">⏱️ 시간 모으기<small>누를 때마다 이어서 쌓여요</small></button></div>
+    <div id="swSec">
+      <div class="lab">무엇을 모으는 시간인가요?</div>
+      <input id="swName" placeholder="예) 떠든 시간 → 점심시간에서 빼요" maxlength="30">
+      <div class="swnow" id="swNow"></div>
+      <div class="row2"><button class="btn" id="swReset0">🗑 0으로</button><button class="btn go" id="btnSw">▶ 스톱워치 열기</button></div>
+    </div>
+    <div id="tmSec">
     <p class="sub">시간을 고르고 「시작」을 누르면 화면 가득 타이머가 나와요</p>
 
     <div class="lab">무엇을 하는 시간인가요? (안 적어도 돼요)</div>
@@ -119,6 +158,7 @@ body.idle #ctrl{opacity:.12}
       <label class="tog"><input type="checkbox" id="snd"> 🔔 소리 (끝날 때 종, 마지막 10초 째깍)</label>
       <button class="btn go" id="btnStart">▶ 시작</button>
     </div>
+    </div>
   </div>
 </div>
 
@@ -133,6 +173,18 @@ body.idle #ctrl{opacity:.12}
     <button class="btn" id="bRestart">↺ 처음부터</button>
     <button class="btn" id="bFull">⛶ 전체화면</button>
     <button class="btn" id="bBack">⚙️ 다시 맞추기</button>
+  </div>
+</div>
+<div id="sw">
+  <div id="swTitle"></div>
+  <div id="swBadge">⏸ 멈춰 있어요</div>
+  <div id="swTime">0:00</div>
+  <div id="swCoins"></div>
+  <button id="swGo">▶ 모으기 시작</button>
+  <div id="swLog"></div>
+  <div class="swctl">
+    <button class="btn" data-adj="-10">－10초</button><button class="btn" data-adj="10">＋10초</button>
+    <button class="btn" id="swReset">🗑 0으로</button><button class="btn" id="swFull">⛶ 전체화면</button><button class="btn" id="swBack">⚙️ 처음 화면</button>
   </div>
 </div>
 <div id="big"><span></span></div>
@@ -313,19 +365,62 @@ $('#bPause').onclick=()=> running? pause() : resume();
 $('#bPlus').onclick=()=>add(60);
 $('#bMinus').onclick=()=>add(-60);
 $('#bRestart').onclick=()=>{ $('#end').classList.remove('on'); left=total=(+S.m||0)*60+(+S.s||0); lastSec=-1; curPh=''; resume(); };
-$('#bBack').onclick=()=>{ running=false; cancelAnimationFrame(raf); $('#end').classList.remove('on'); document.body.className='s-'+S.style; drawSetup(); };
+$('#bBack').onclick=()=>{ running=false; cancelAnimationFrame(raf); $('#end').classList.remove('on'); document.body.className='s-'+S.style; drawSetup(); drawMode(); };
 function fullOn(){ const d=document.documentElement; if(d.requestFullscreen&&!document.fullscreenElement) d.requestFullscreen().catch(()=>{}); }
 $('#bFull').onclick=()=> document.fullscreenElement? document.exitFullscreen() : fullOn();
 /* 가만히 있으면 버튼을 흐리게 → 화면이 깔끔 */
-let idleT=0; function idleKick(){ document.body.classList.remove('idle'); clearTimeout(idleT); idleT=setTimeout(()=>{ if(document.body.classList.contains('run')) document.body.classList.add('idle'); },4000); }
+let idleT=0; function idleKick(){ document.body.classList.remove('idle'); clearTimeout(idleT); idleT=setTimeout(()=>{ if(/\b(run|swrun)\b/.test(document.body.className)) document.body.classList.add('idle'); },4000); }
 ['mousemove','pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,idleKick));
 document.addEventListener('keydown',e=>{
-  if(!document.body.classList.contains('run')){ if(e.key==='Enter') start(); return; }
+  if(document.body.classList.contains('swrun')){ if(e.key===' '){ e.preventDefault(); swToggle(); } return; }
+  if(!document.body.classList.contains('run')){ if(e.key==='Enter'&&e.target.tagName!=='BUTTON') (S.mode==='sw'?openSw():start()); return; }
   if(e.key===' '){ e.preventDefault(); if($('#end').classList.contains('on')) { $('#end').classList.remove('on'); return; } running?pause():resume(); }
   if(e.key==='Escape') $('#end').classList.remove('on');
 });
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&running){ cancelAnimationFrame(raf); paint(); } });
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) return; if(running){ cancelAnimationFrame(raf); paint(); } if(document.body.classList.contains('swrun')) swPaint(); });
+
+/* ── ⏱️ 시간 모으기: 누를 때마다 이어서 쌓인다. 새로고침해도 남도록 시각(Date.now)으로 저장 ── */
+S.mode=S.mode||'timer'; S.swName=S.swName??'떠든 시간';
+S.sw=Object.assign({acc:0, at:null, log:[]},S.sw||{});
+const swTotal=()=>S.sw.acc+(S.sw.at?Date.now()-S.sw.at:0);
+function hms(ms){ const t=Math.floor(ms/1000), h=Math.floor(t/3600), m=Math.floor(t%3600/60), s=t%60;
+  return h? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`; }
+function kor(ms){ const t=Math.round(ms/1000), m=Math.floor(t/60), s=t%60; return m? (s?`${m}분 ${s}초`:`${m}분`) : `${s}초`; }
+function drawMode(){ document.body.classList.toggle('m-sw',S.mode==='sw');
+  document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.mode));
+  $('#swName').value=S.swName;
+  const t=swTotal(); $('#swNow').innerHTML= t||S.sw.at? `지금까지 모인 시간 <b>${hms(t)}</b>${S.sw.log.length?` · ${S.sw.log.length}번`:''}${S.sw.at?' · 🔴 모으는 중':''}` : '아직 모인 시간이 없어요';
+}
+$('#modes').onclick=e=>{ const b=e.target.closest('[data-mode]'); if(!b) return; S.mode=b.dataset.mode; save(); drawMode(); };
+$('#swName').oninput=e=>{ S.swName=e.target.value; save(); };
+let swRaf=0;
+function swPaint(){
+  const t=swTotal(); $('#swTime').textContent=hms(t);
+  const mins=Math.floor(t/60000);
+  $('#swCoins').innerHTML= mins? (mins<=20? '🪙'.repeat(mins) : '🪙'.repeat(10)+` <small>× ${mins}</small>`)+` <small>${mins}분</small>` : '';
+  document.body.classList.toggle('swon',!!S.sw.at);
+  $('#swBadge').textContent= S.sw.at? '🔴 시간 모으는 중…' : '⏸ 멈춰 있어요';
+  $('#swGo').textContent= S.sw.at? '⏸ 멈춤' : (S.sw.acc? '▶ 이어서 모으기' : '▶ 모으기 시작');
+  const L=S.sw.log; $('#swLog').innerHTML=L.map((d,i)=>`<span>${i+1}번 · ${kor(d)}</span>`).join('')+(S.sw.at?`<span style="border-color:#ff4d5e">${L.length+1}번 · 모으는 중</span>`:'');
+  cancelAnimationFrame(swRaf); if(S.sw.at && document.body.classList.contains('swrun')) swRaf=requestAnimationFrame(swPaint);
+}
+function swToggle(){
+  if(S.sw.at){ const d=Date.now()-S.sw.at; S.sw.acc+=d; S.sw.log.push(d); S.sw.at=null; tone(660,.12,'sine',.25); tone(440,.2,'sine',.25,.13); }
+  else { S.sw.at=Date.now(); tone(880,.25,'square',.12); }
+  save(); swPaint();
+}
+function swReset(){ if(swTotal()>0 && !confirm('모은 시간을 0으로 지울까요?')) return; S.sw={acc:0,at:null,log:[]}; save(); swPaint(); drawMode(); }
+function openSw(){ ac(); document.body.className='swrun'; $('#swTitle').textContent=S.swName||''; swPaint(); idleKick(); }
+$('#btnSw').onclick=openSw;
+$('#swReset0').onclick=swReset;
+$('#swGo').onclick=swToggle;
+$('#swReset').onclick=swReset;
+$('#swFull').onclick=()=> document.fullscreenElement? document.exitFullscreen() : fullOn();
+$('#swBack').onclick=()=>{ cancelAnimationFrame(swRaf); document.body.className='s-'+S.style; drawSetup(); drawMode(); };
+document.querySelector('.swctl').addEventListener('click',e=>{ const b=e.target.closest('[data-adj]'); if(!b) return;
+  S.sw.acc=Math.max(-(S.sw.at?Date.now()-S.sw.at:0), S.sw.acc+(+b.dataset.adj)*1000); save(); swPaint(); });
 drawSetup();
+drawMode();
 </script>
 </body>
 </html>
